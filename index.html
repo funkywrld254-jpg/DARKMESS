@@ -1,0 +1,104 @@
+<!-- index.html - darkmess Frontend UI -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>darkmess</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: #121212; color: #e0e0e0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .auth-container, .chat-container { width: 100%; max-width: 400px; background: #1e1e1e; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); border: 1px solid #333; box-sizing: border-box; }
+        .chat-container { max-width: 600px; height: 80vh; display: flex; flex-direction: column; padding: 15px; }
+        h2 { text-align: center; color: #ff3e3e; margin-top: 0; font-size: 28px; letter-spacing: 1px; }
+        input { width: 100%; padding: 12px; margin: 10px 0; background: #2a2a2a; border: 1px solid #444; color: white; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #ff3e3e; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #e03232; }
+        .toggle-text { text-align: center; font-size: 14px; margin-top: 15px; color: #aaa; cursor: pointer; }
+        #messages { list-style-type: none; padding: 10px; margin: 0; flex-grow: 1; overflow-y: auto; background: #181818; border-radius: 8px; border: 1px solid #2d2d2d; }
+        #messages li { padding: 8px 12px; margin-bottom: 8px; background: #262626; border-radius: 6px; width: fit-content; max-width: 80%; word-break: break-word; }
+        #messages .system-msg { background: transparent; color: #ffaa00; font-style: italic; }
+        #messages .user-tag { font-weight: bold; color: #ff3e3e; margin-right: 5px; }
+        #chat-form { display: flex; margin-top: 10px; }
+        #chat-input { flex-grow: 1; margin: 0; border-radius: 6px 0 0 6px; }
+        #send-btn { width: auto; padding: 0 25px; border-radius: 0 6px 6px 0; }
+    </style>
+</head>
+<body>
+    <div id="auth-box" class="auth-container">
+        <h2 id="auth-title">darkmess Login</h2>
+        <input type="text" id="username" placeholder="Username" required />
+        <input type="password" id="password" placeholder="Password" required />
+        <button id="auth-btn" onclick="handleAuth()">Enter Room</button>
+        <div id="toggle-auth" class="toggle-text" onclick="toggleMode()">Don't have an account? Sign Up</div>
+    </div>
+    <div id="chat-box" class="chat-container" style="display: none;">
+        <h2>darkmess</h2>
+        <ul id="messages"></ul>
+        <form id="chat-form" action="">
+            <input id="chat-input" autocomplete="off" placeholder="Type a message safely..." />
+            <button id="send-btn">Send</button>
+        </form>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        let isLoginMode = true;
+        let currentUser = '';
+        const socket = io();
+
+        function toggleMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('auth-title').innerText = isLoginMode ? 'darkmess Login' : 'darkmess Sign Up';
+            document.getElementById('auth-btn').innerText = isLoginMode ? 'Enter Room' : 'Create Account';
+            document.getElementById('toggle-auth').innerText = isLoginMode ? "Don't have an account? Sign Up" : "Already have an account? Login";
+        }
+
+        async function handleAuth() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const endpoint = isLoginMode ? '/api/login' : '/api/signup';
+
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                currentUser = data.username;
+                document.getElementById('auth-box').style.display = 'none';
+                document.getElementById('chat-box').style.display = 'flex';
+                socket.emit('join chat', currentUser);
+            } else {
+                alert(data.error || "Authentication failed");
+            }
+        }
+
+        const form = document.getElementById('chat-form');
+        const input = document.getElementById('chat-input');
+        const messages = document.getElementById('messages');
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (input.value.trim()) {
+                socket.emit('chat message', input.value);
+                input.value = '';
+            }
+        });
+
+        function appendMessage(data) {
+            const item = document.createElement('li');
+            if (data.user === 'System') {
+                item.className = 'system-msg';
+                item.textContent = data.text;
+            } else {
+                item.innerHTML = `<span class="user-tag">${data.user}:</span> ${data.text}`;
+            }
+            messages.appendChild(item);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        socket.on('chat message', (data) => { appendMessage(data); });
+        socket.on('chat history', (history) => { history.forEach(msg => appendMessage(msg)); });
+    </script>
+</body>
+</html>
