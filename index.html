@@ -4,236 +4,446 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>darkmess</title>
-<script src="/socket.io/socket.io.js"></script>
+<title>Darkmess</title>
 <style>
+:root{color-scheme:dark;--red:#ff304f;--panel:#17171c;--muted:#a4a4b0}
 *{box-sizing:border-box}
-body{margin:0;background:#080808;color:#fff;font-family:Arial,sans-serif}
-header{padding:18px;background:#141414;border-bottom:2px solid #f23}
-h1{margin:0;color:#f23}
-main{max-width:650px;margin:20px auto;padding:12px}
-.panel{background:#151515;border:1px solid #333;border-radius:12px;padding:18px;margin-bottom:14px}
-input,select,button{width:100%;padding:13px;margin:6px 0;border-radius:8px;font-size:16px}
-input,select{background:#090909;color:#fff;border:1px solid #444}
-button{background:#f23;color:white;border:0;font-weight:bold;cursor:pointer}
-button:disabled{opacity:.5}
-.secondary{background:#333}
-#chat{display:none}
-#messages{height:300px;overflow-y:auto;padding:10px;background:#090909;border:1px solid #333;border-radius:8px}
-.message{background:#222;padding:10px;margin:8px 0;border-radius:8px;overflow-wrap:anywhere}
-.mine{border-left:3px solid #f23}
-.small{color:#aaa;font-size:13px}
-#status,#chatStatus{color:#ff6877}
+body{margin:0;background:#0b0b0f;color:#fff;font:15px Arial,sans-serif}
+button,input{font:inherit}
+button{cursor:pointer}
+input{min-width:0}
+.hidden{display:none!important}
+header{padding:17px 20px;border-bottom:1px solid #292930;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:23px;font-weight:800;color:var(--red)}
+main{max-width:1050px;margin:20px auto;padding:0 12px}
+.panel{background:var(--panel);border:1px solid #292930;border-radius:15px;padding:16px}
+button,.btn{border:0;border-radius:9px;background:var(--red);color:white;padding:11px 14px;font-weight:700}
+.secondary{background:#292930}
+input{background:#0d0d12;border:1px solid #34343d;color:white;border-radius:9px;padding:12px;width:100%;outline:none}
+input:focus{border-color:var(--red)}
+.auth{max-width:410px;margin:50px auto}
+.auth form{display:grid;gap:12px}
+.auth h1{margin-top:0}
+.muted{color:var(--muted);font-size:13px}
+.error{color:#ff7185;min-height:18px}
+.layout{display:grid;grid-template-columns:290px 1fr;gap:14px}
+.side{display:flex;flex-direction:column;gap:12px}
+.profile{display:flex;align-items:center;gap:12px}
+.avatar{width:43px;height:43px;border-radius:50%;object-fit:cover;background:#303039;display:flex;align-items:center;justify-content:center;font-weight:bold;color:white;flex-shrink:0}
+.person{display:flex;align-items:center;gap:10px;text-align:left;background:transparent;color:white;width:100%;padding:10px;border-radius:10px}
+.person:hover,.person.active{background:#292930}
+.person-info{min-width:0;flex:1}
+.person-info strong,.person-info small{display:block;overflow:hidden;text-overflow:ellipsis}
+.person-info small{color:var(--muted);margin-top:4px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#666;margin-right:5px}
+.dot.online{background:#3ddc84}
+.people{max-height:250px;overflow:auto}
+.chat{display:flex;flex-direction:column;min-height:65vh}
+.chat-head{display:flex;align-items:center;gap:10px;padding-bottom:12px;border-bottom:1px solid #303039}
+.messages{flex:1;overflow-y:auto;min-height:280px;max-height:55vh;padding:15px 0;display:flex;flex-direction:column;gap:10px}
+.bubble{max-width:82%;align-self:flex-start;background:#292930;padding:10px 12px;border-radius:13px;overflow-wrap:anywhere}
+.bubble.mine{align-self:flex-end;background:#8d1830}
+.bubble img{display:block;max-width:100%;max-height:300px;border-radius:8px;margin-top:5px}
+.bubble time{display:block;font-size:10px;color:#ddd;margin-top:6px}
+.composer{display:flex;gap:8px;align-items:center;border-top:1px solid #303039;padding-top:12px}
+.composer input[type=text]{flex:1}
+#imagePick{display:none}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.section-title{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:4px 0}
+.profile-form{display:grid;gap:9px}
+.status{min-height:20px;color:#8fe5ad;font-size:13px}
+@media(max-width:700px){main{margin:12px auto}.layout{grid-template-columns:1fr}.chat{min-height:55vh}.messages{max-height:42vh}.side{order:1}.chat-panel{order:2}.people{max-height:170px}.auth{margin:25px auto}}
 </style>
 </head>
 <body>
 <header>
-<h1>darkmess</h1>
-<div class="small">Your space. Your conversations.</div>
+  <div class="logo">darkmess</div>
+  <button id="logout" class="secondary hidden">Log out</button>
 </header>
 
 <main>
-<section class="panel" id="auth">
-<h2 id="authTitle">Log in</h2>
-<form id="authForm">
-<input id="username" placeholder="Username" required autocomplete="username">
-<input id="password" type="password" placeholder="Password" required autocomplete="current-password">
-<button id="submitBtn">Log in</button>
-</form>
-<button class="secondary" id="switchBtn" type="button">Create an account</button>
-<p id="status"></p>
+<section id="auth" class="panel auth">
+  <h1 id="authTitle">Welcome back</h1>
+  <p class="muted">Private, direct conversations.</p>
+  <form id="authForm">
+    <input id="displayName" placeholder="Your display name (for signup)" maxlength="40" class="hidden">
+    <input id="username" placeholder="Username" autocomplete="username" required>
+    <input id="password" type="password" placeholder="Password" autocomplete="current-password" required>
+    <button id="authSubmit">Log in</button>
+  </form>
+  <p id="authError" class="error"></p>
+  <button id="toggleAuth" class="secondary">Create an account</button>
 </section>
 
-<section class="panel" id="chat">
-<h2>Welcome, <span id="who"></span></h2>
-<label for="people">search user </label>
-<select id="people"><option value="">Loading users...</option></select>
-<div id="messages"></div>
-<form id="messageForm">
-<input id="messageInput" placeholder="Write a message..." maxlength="4000" required>
-<button id="sendBtn">Send message</button>
-</form>
-<p id="chatStatus" class="small"></p>
-<button class="secondary" id="logoutBtn" type="button">Log out</button>
+<section id="app" class="hidden">
+  <div class="layout">
+    <aside class="side">
+      <div class="panel">
+        <div class="profile">
+          <img id="myPicture" class="avatar hidden" alt="Profile">
+          <div id="myInitial" class="avatar">D</div>
+          <div style="min-width:0">
+            <strong id="myName">Your profile</strong>
+            <div class="muted" id="myHandle">@username</div>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="editToggle" class="secondary">Edit profile</button>
+          <label class="btn secondary" for="profilePick">Photo</label>
+          <input id="profilePick" type="file" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden">
+        </div>
+        <form id="profileForm" class="profile-form hidden" style="margin-top:12px">
+          <input id="editDisplayName" placeholder="Display name" maxlength="40">
+          <input id="editUsername" placeholder="Username" maxlength="20">
+          <button>Save profile</button>
+          <div id="profileStatus" class="status"></div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <p class="section-title">Find people</p>
+        <input id="search" placeholder="Search usernames..." autocomplete="off">
+        <div id="searchResults" class="people"></div>
+      </div>
+
+      <div class="panel">
+        <p class="section-title">Your inbox</p>
+        <div id="inbox" class="people"></div>
+      </div>
+    </aside>
+
+    <section class="panel chat-panel">
+      <div class="chat">
+        <div class="chat-head">
+          <div id="chatAvatar" class="avatar">D</div>
+          <div>
+            <strong id="chatName">Your messages</strong>
+            <div id="chatStatus" class="muted">Choose someone to start chatting</div>
+          </div>
+        </div>
+        <div id="messages" class="messages">
+          <p class="muted">Your direct messages will appear here.</p>
+        </div>
+        <form id="messageForm" class="composer">
+          <label class="btn secondary" for="imagePick" title="Send photo or GIF">＋</label>
+          <input id="imagePick" type="file" accept="image/png,image/jpeg,image/gif,image/webp">
+          <input id="messageText" type="text" maxlength="4000" placeholder="Write a message..." autocomplete="off">
+          <button id="sendButton">Send</button>
+        </form>
+        <div id="chatError" class="error"></div>
+      </div>
+    </section>
+  </div>
 </section>
 </main>
 
+<script src="/socket.io/socket.io.js"></script>
 <script>
 const $ = id => document.getElementById(id);
-let isSignup = false;
-let currentUser = "";
-let selectedUser = "";
+let signupMode = false;
+let me = null;
+let activeChat = null;
 let socket = null;
+let online = new Set();
 
-function showStatus(message) {
-  $("status").textContent = message;
+async function api(url, options = {}) {
+  const response = await fetch(url, {
+    credentials: "same-origin",
+    ...options,
+    headers: {
+      ...(options.body instanceof FormData ? {} : {"Content-Type":"application/json"}),
+      ...(options.headers || {})
+    }
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "Something went wrong.");
+  return data;
 }
 
-$("switchBtn").onclick = () => {
-  isSignup = !isSignup;
-  $("authTitle").textContent = isSignup ? "Create account" : "Log in";
-  $("submitBtn").textContent = isSignup ? "Sign up" : "Log in";
-  $("switchBtn").textContent = isSignup
-    ? "I already have an account" : "Create an account";
-  showStatus("");
-};
+function escapeText(value) {
+  return String(value || "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+}
 
-$("authForm").onsubmit = async event => {
-  event.preventDefault();
-  $("submitBtn").disabled = true;
-  showStatus("Please wait...");
-
-  try {
-    const response = await fetch(isSignup ? "/api/signup" : "/api/login", {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      credentials: "same-origin",
-      body: JSON.stringify({
-        username: $("username").value.trim(),
-        password: $("password").value
-      })
-    });
-
-    const data = await response.json();
-    if (!response.ok || !data.success) {
-      throw new Error(data.message || data.error || "Could not log in.");
-    }
-
-    openChat(data.username);
-  } catch (err) {
-    showStatus(err.message || "Connection failed.");
-  } finally {
-    $("submitBtn").disabled = false;
+function avatarMarkup(user) {
+  if (user.profilePicture) {
+    return '<img class="avatar" alt="" src="' + escapeText(user.profilePicture) + '">';
   }
-};
+  const initial = (user.displayName || user.username || "?").charAt(0).toUpperCase();
+  return '<div class="avatar">' + escapeText(initial) + '</div>';
+}
+
+function personButton(user) {
+  const name = user.displayName || user.username;
+  return '<button class="person ' + (activeChat === user.username ? 'active' : '') +
+    '" data-user="' + escapeText(user.username) + '">' +
+    avatarMarkup(user) +
+    '<span class="person-info"><strong>' + escapeText(name) +
+    '</strong><small><span class="dot ' + (user.online ? 'online' : '') +
+    '"></span>@' + escapeText(user.username) + '</small></span></button>';
+}
+
+function attachPersonClicks(container) {
+  container.querySelectorAll("[data-user]").forEach(button => {
+    button.addEventListener("click", () => openChat(button.dataset.user));
+  });
+}
+
+async function loadMe() {
+  me = await api("/api/me");
+  $("myName").textContent = me.displayName;
+  $("myHandle").textContent = "@" + me.username;
+  $("editDisplayName").value = me.displayName;
+  $("editUsername").value = me.username;
+
+  if (me.profilePicture) {
+    $("myPicture").src = me.profilePicture;
+    $("myPicture").classList.remove("hidden");
+    $("myInitial").classList.add("hidden");
+  } else {
+    $("myInitial").textContent = (me.displayName || me.username)[0].toUpperCase();
+    $("myPicture").classList.add("hidden");
+    $("myInitial").classList.remove("hidden");
+  }
+}
+
+async function loadInbox() {
+  const users = await api("/api/inbox");
+  const container = $("inbox");
+  container.innerHTML = users.length
+    ? users.map(personButton).join("")
+    : '<p class="muted">No conversations yet. Search for someone above.</p>';
+  attachPersonClicks(container);
+}
+
+async function searchPeople() {
+  const q = $("search").value.trim();
+  const users = await api("/api/users?q=" + encodeURIComponent(q));
+  const container = $("searchResults");
+  container.innerHTML = users.length
+    ? users.map(personButton).join("")
+    : '<p class="muted">No users found.</p>';
+  attachPersonClicks(container);
+}
 
 async function openChat(username) {
-  currentUser = username;
-  $("who").textContent = username;
-  $("auth").style.display = "none";
-  $("chat").style.display = "block";
-  $("chatStatus").textContent = "Connecting...";
-  $("people").innerHTML = '<option value="">Choose a user</option>';
+  activeChat = username;
+  const users = await api("/api/users?q=" + encodeURIComponent(username));
+  const found = users.find(u => u.username === username);
+  $("chatName").textContent = found ? found.displayName : username;
+  $("chatStatus").textContent = (online.has(username) || found?.online)
+    ? "Online" : "@" + username;
+  $("chatAvatar").innerHTML = found?.profilePicture
+    ? '<img class="avatar" src="' + escapeText(found.profilePicture) + '" alt="">'
+    : escapeText((found?.displayName || username)[0].toUpperCase());
 
-  try {
-    const response = await fetch("/api/users", {
-      credentials: "same-origin"
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || "Could not load users.");
+  $("messages").innerHTML = '<p class="muted">Loading messages...</p>';
+  $("chatError").textContent = "";
+  await loadInbox();
+  if (socket) socket.emit("open conversation", {with: username});
+}
 
-    data.users.forEach(user => {
-      const option = document.createElement("option");
-      option.value = user.username;
-      option.textContent = user.username + (user.online ? " • online" : "");
-      $("people").appendChild(option);
-    });
-  } catch (err) {
-    $("chatStatus").textContent = err.message;
+function renderMessages(messages) {
+  const box = $("messages");
+  box.innerHTML = "";
+  if (!messages.length) {
+    box.innerHTML = '<p class="muted">No messages yet. Say hello!</p>';
+    return;
   }
 
-  if (socket) socket.disconnect();
+  for (const m of messages) {
+    const mine = m.username === me.username || m.user === me.username;
+    const bubble = document.createElement("div");
+    bubble.className = "bubble" + (mine ? " mine" : "");
+
+    if (m.text) {
+      const text = document.createElement("div");
+      text.textContent = m.text;
+      bubble.appendChild(text);
+    }
+
+    if (m.image) {
+      const img = document.createElement("img");
+      img.src = m.image;
+      img.alt = "Shared image";
+      img.loading = "lazy";
+      bubble.appendChild(img);
+    }
+
+    const time = document.createElement("time");
+    time.textContent = m.timestamp || "";
+    bubble.appendChild(time);
+    box.appendChild(bubble);
+  }
+
+  box.scrollTop = box.scrollHeight;
+}
+
+async function refreshApp() {
+  $("auth").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  $("logout").classList.remove("hidden");
+  await loadMe();
+  await loadInbox();
+  await searchPeople();
+
   socket = io();
 
-  socket.on("connect", () => {
-    $("chatStatus").textContent = "Connected.";
-    if (selectedUser) openSelectedConversation();
+  socket.on("online users", list => {
+    online = new Set(list);
+    loadInbox().catch(() => {});
+    searchPeople().catch(() => {});
   });
 
-  socket.on("connect_error", () => {
-    $("chatStatus").textContent = "Chat connection failed. Refresh the page.";
+  socket.on("user online", username => {
+    online.add(username);
+    if (activeChat === username) $("chatStatus").textContent = "Online";
+  });
+
+  socket.on("user offline", username => {
+    online.delete(username);
+    if (activeChat === username) $("chatStatus").textContent = "Offline";
   });
 
   socket.on("chat history", history => {
-    $("messages").replaceChildren();
-    history.forEach(addMessage);
+    renderMessages(history);
   });
 
   socket.on("chat message", message => {
-    if (!selectedUser) return;
-    const from = (message.username || message.user || "").toLowerCase();
-    const to = (message.recipient || "").toLowerCase();
-    if ((from === currentUser.toLowerCase() &&
-         to === selectedUser.toLowerCase()) ||
-        (from === selectedUser.toLowerCase() &&
-         to === currentUser.toLowerCase())) {
-      addMessage(message);
+    if (activeChat &&
+        ((message.username === me.username && message.recipient === activeChat) ||
+         (message.username === activeChat && message.recipient === me.username))) {
+      const current = [...$("messages").querySelectorAll(".bubble")].map(() => null);
+      // Rebuild the visible conversation from the latest history after a new message.
+      socket.emit("open conversation", {with: activeChat});
     }
-  });
-
-  socket.on("chat error", data => {
-    $("chatStatus").textContent = data.message || "Message failed.";
+    loadInbox().catch(() => {});
   });
 }
 
-function openSelectedConversation() {
-  if (!socket || !socket.connected || !selectedUser) return;
-  $("messages").replaceChildren();
-  socket.emit("open conversation", {with: selectedUser});
-}
+$("toggleAuth").addEventListener("click", () => {
+  signupMode = !signupMode;
+  $("displayName").classList.toggle("hidden", !signupMode);
+  $("displayName").required = signupMode;
+  $("authTitle").textContent = signupMode ? "Create your account" : "Welcome back";
+  $("authSubmit").textContent = signupMode ? "Sign up" : "Log in";
+  $("toggleAuth").textContent = signupMode ? "I already have an account" : "Create an account";
+  $("authError").textContent = "";
+});
 
-$("people").onchange = () => {
-  selectedUser = $("people").value;
-  openSelectedConversation();
-};
-
-function addMessage(message) {
-  const item = document.createElement("div");
-  item.className = "message";
-  if ((message.username || message.user) === currentUser) {
-    item.classList.add("mine");
-  }
-
-  const sender = document.createElement("strong");
-  sender.textContent = message.user || message.username || "User";
-
-  const text = document.createElement("div");
-  text.textContent = message.text || "";
-
-  const time = document.createElement("div");
-  time.className = "small";
-  time.textContent = message.timestamp
-    ? new Date(message.timestamp).toLocaleString() : "";
-
-  item.append(sender, text, time);
-  $("messages").appendChild(item);
-  $("messages").scrollTop = $("messages").scrollHeight;
-}
-
-$("messageForm").onsubmit = event => {
+$("authForm").addEventListener("submit", async event => {
   event.preventDefault();
-  const text = $("messageInput").value.trim();
-
-  if (!selectedUser) {
-    $("chatStatus").textContent = "Choose a user first.";
-    return;
-  }
-  if (!socket || !socket.connected) {
-    $("chatStatus").textContent = "Not connected. Refresh and try again.";
-    return;
-  }
-  if (!text) return;
-
-  socket.emit("chat message", {text, to: selectedUser});
-  $("messageInput").value = "";
-};
-
-$("logoutBtn").onclick = async () => {
-  if (socket) socket.disconnect();
+  $("authError").textContent = "";
   try {
-    await fetch("/api/logout", {
+    await api(signupMode ? "/api/signup" : "/api/login", {
       method: "POST",
-      credentials: "same-origin"
+      body: JSON.stringify({
+        username: $("username").value.trim(),
+        password: $("password").value,
+        displayName: $("displayName").value.trim()
+      })
     });
-  } finally {
-    currentUser = "";
-    selectedUser = "";
-    $("chat").style.display = "none";
-    $("auth").style.display = "block";
-    $("password").value = "";
-    showStatus("Logged out.");
+    location.reload();
+  } catch (error) {
+    $("authError").textContent = error.message;
   }
-};
+});
+
+$("logout").addEventListener("click", async () => {
+  await api("/api/logout", {method:"POST"});
+  location.reload();
+});
+
+$("editToggle").addEventListener("click", () => {
+  $("profileForm").classList.toggle("hidden");
+});
+
+$("profileForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  $("profileStatus").textContent = "";
+  try {
+    await api("/api/profile", {
+      method: "PATCH",
+      body: JSON.stringify({
+        displayName: $("editDisplayName").value.trim(),
+        username: $("editUsername").value.trim()
+      })
+    });
+    $("profileStatus").textContent = "Profile saved.";
+    await loadMe();
+    await loadInbox();
+    await searchPeople();
+  } catch (error) {
+    $("profileStatus").textContent = error.message;
+  }
+});
+
+$("profilePick").addEventListener("change", async () => {
+  const file = $("profilePick").files[0];
+  if (!file) return;
+  try {
+    const form = new FormData();
+    form.append("image", file);
+    await api("/api/profile-picture", {method:"POST", body:form});
+    await loadMe();
+  } catch (error) {
+    alert(error.message);
+  }
+  $("profilePick").value = "";
+});
+
+let searchTimer;
+$("search").addEventListener("input", () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => searchPeople().catch(() => {}), 200);
+});
+
+$("messageForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const text = $("messageText").value.trim();
+  const file = $("imagePick").files[0];
+
+  if (!activeChat) {
+    $("chatError").textContent = "Choose someone from your inbox first.";
+    return;
+  }
+  if (!text && !file) return;
+
+  $("chatError").textContent = "";
+
+  try {
+    let image = null;
+
+    if (file) {
+      const form = new FormData();
+      form.append("image", file);
+      const uploaded = await api("/api/message-image", {
+        method: "POST",
+        body: form
+      });
+      image = uploaded.url;
+    }
+
+    socket.emit("chat message", {
+      text,
+      to: activeChat,
+      image
+    });
+
+    $("messageText").value = "";
+    $("imagePick").value = "";
+    socket.emit("open conversation", {with: activeChat});
+  } catch (error) {
+    $("chatError").textContent = error.message;
+  }
+});
+
+api("/api/me")
+  .then(refreshApp)
+  .catch(() => {
+    $("auth").classList.remove("hidden");
+  });
 </script>
 </body>
   </html>
