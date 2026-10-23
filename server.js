@@ -1,35 +1,59 @@
 
 const express = require("express");
-const http = require("http");
-const path = require("path");
-const bcrypt = require("bcryptjs");
-const sqlite3 = require("sqlite3").verbose();
-const { open } = require("sqlite");
 const session = require("express-session");
+const bcrypt = require("bcryptjs");
+const sqlite3 = require("sqlite3");
+const { open } = require("sqlite");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+const http = require("http");
 const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+
 const PORT = process.env.PORT || 3000;
 const SECRET = process.env.SESSION_SECRET;
 
 if (!SECRET || SECRET.length < 32) {
-  console.error("Add SESSION_SECRET in Render Environment (32+ characters).");
-  process.exit(1);
+  throw new Error("Set SESSION_SECRET to a random string of at least 32 characters.");
 }
 
 app.set("trust proxy", 1);
-app.use(express.json({ limit: "20kb" }));
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true }));
+
+const uploadsDir = path.join(__dirname, "uploads");
+fs.mkdirSync(uploadsDir, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, Date.now() + "-" + require("crypto").randomBytes(8).toString("hex") + ext);
+  }
+});
+
+const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (allowedTypes.includes(file.mimetype)) cb(null, true);
+    else cb(new Error("Use a JPG, PNG, GIF, or WebP image."));
+  }
+});
 
 const sessionMiddleware = session({
-  name: "darkmess.sid",
   secret: SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: "auto",
     sameSite: "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000
   }
@@ -37,30 +61,21 @@ const sessionMiddleware = session({
 
 app.use(sessionMiddleware);
 io.engine.use(sessionMiddleware);
-
-// Serve index.html and other website files.
+app.use("/uploads", express.static(uploadsDir));
 app.use(express.static(__dirname));
-app.get("/", (_req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
 
 let db;
-const online = new Map();
-const room = username => "user:" + username.toLowerCase();
 
-function requireLogin(req, res, next) {
-  if (!req.session.username) {
-    return res.status(401).json({
-      success: false,
-      message: "Please log in first."
-    });
+async function addColumnIfMissing(table, column, definition) {
+  const columns = await db.all(`PRAGMA table_info(${table})`);
+  if (!columns.some(c => c.name === column)) {
+    await db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
   }
-  next();
 }
 
-async function initDB() {
+async function initDatabase() {
   db = await open({
-    filename: process.env.DB_PATH || path.join(__dirname, "database.sqlite"),
+    filename: path.join(__dirname, "database.sqlite"),
     driver: sqlite3.Database
   });
 
@@ -73,225 +88,320 @@ async function initDB() {
 
     CREATE TABLE IF NOT EXISTS messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT,
+      username TEXT NOT NULL,
       text TEXT,
-      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+      timestamp TEXT DEFAULT CURRENT_TIMESTAMP
     );
   `);
 
-  const cols = await db.all("PRAGMA table_info(messages)");
-  if (!cols.some(c => c.name === "recipient")) {
-    await db.exec("ALTER TABLE messages ADD COLUMN recipient TEXT");
-  }
+  await addColumnIfMissing("users", "display_name", "TEXT");
+  await addColumnIfMissing("users", "profile_picture", "TEXT");
+  await addColumnIfMissing("messages", "recipient", "TEXT");
+  await addColumnIfMissing("messages", "image", "TEXT");
 
-  console.log("darkmess database ready.");
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS messages_sender_idx
+    ON messages(username);
+
+    CREATE INDEX IF NOT EXISTS messages_recipient_idx
+    ON messages(recipient);
+  `);
+
+  console.log("Database ready");
 }
 
-app.get("/api/health", (_req, res) => {
-  res.json({ success: true });
+function currentUser(req) {
+  return req.session?.username || null;
+}
+
+function requireLogin(req, res, next) {
+  if (!currentUser(req)) {
+    return res.status(401).json({ error: "Please log in first." });
+  }
+  next();
+}
+
+function cleanUsername(value) {
+  return typeof value === "string" &&
+    /^[a-zA-Z0-9_]{3,20}$/.test(value);
+}
+
+function publicUser(user) {
+  return {
+    username: user.username,
+    displayName: user.display_name || user.username,
+    profilePicture: user.profile_picture || null
+  };
+}
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+app.get("/api/health", (req, res) => {
+  res.json({ ok: true });
+});
+
+app.get("/api/me", requireLogin, async (req, res) => {
+  const user = await db.get(
+    "SELECT username, display_name, profile_picture FROM users WHERE username = ?",
+    currentUser(req)
+  );
+  if (!user) return res.status(401).json({ error: "Account not found." });
+  res.json(publicUser(user));
 });
 
 app.post("/api/signup", async (req, res) => {
   try {
-    const username = typeof req.body.username === "string"
-      ? req.body.username.trim() : "";
-    const password = typeof req.body.password === "string"
-      ? req.body.password : "";
+    const username = String(req.body.username || "").trim();
+    const password = String(req.body.password || "");
+    const displayName = String(req.body.displayName || username).trim().slice(0, 40);
 
-    if (!/^[a-zA-Z0-9_]{3,24}$/.test(username)) {
+    if (!cleanUsername(username)) {
       return res.status(400).json({
-        success: false,
-        message: "Username must be 3–24 letters, numbers or underscores."
-      });
-    }
-    if (password.length < 6 || password.length > 72) {
-      return res.status(400).json({
-        success: false,
-        message: "Password must be 6–72 characters."
+        error: "Username must be 3–20 characters using letters, numbers, or underscores."
       });
     }
 
-    const exists = await db.get(
-      "SELECT id FROM users WHERE LOWER(username)=LOWER(?)", username
-    );
-    if (exists) {
-      return res.status(409).json({
-        success: false,
-        message: "Username already taken."
-      });
+    if (password.length < 8 || password.length > 100) {
+      return res.status(400).json({ error: "Password must be 8–100 characters." });
     }
 
     const hash = await bcrypt.hash(password, 12);
-    const result = await db.run(
-      "INSERT INTO users (username,password) VALUES (?,?)",
-      [username, hash]
+
+    await db.run(
+      "INSERT INTO users (username, password, display_name) VALUES (?, ?, ?)",
+      username, hash, displayName || username
     );
 
     req.session.username = username;
-    req.session.userId = result.lastID;
-    req.session.save(err => {
-      if (err) return res.status(500).json({
-        success: false, message: "Account created, but login failed."
-      });
-      res.status(201).json({ success: true, username });
-    });
-  } catch (err) {
-    console.error("Signup:", err);
-    res.status(500).json({ success: false, message: "Signup failed." });
+    res.json({ ok: true, username });
+  } catch (error) {
+    if (error.code === "SQLITE_CONSTRAINT") {
+      return res.status(409).json({ error: "That username is already taken." });
+    }
+    console.error(error);
+    res.status(500).json({ error: "Could not create account." });
   }
 });
 
 app.post("/api/login", async (req, res) => {
-  try {
-    const username = typeof req.body.username === "string"
-      ? req.body.username.trim() : "";
-    const password = typeof req.body.password === "string"
-      ? req.body.password : "";
+  const username = String(req.body.username || "").trim();
+  const password = String(req.body.password || "");
 
-    const user = await db.get(
-      "SELECT * FROM users WHERE LOWER(username)=LOWER(?)", username
-    );
+  const user = await db.get(
+    "SELECT username, password FROM users WHERE username = ?",
+    username
+  );
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({
-        success: false, message: "Incorrect username or password."
-      });
-    }
-
-    req.session.regenerate(err => {
-      if (err) return res.status(500).json({
-        success: false, message: "Login failed."
-      });
-      req.session.username = user.username;
-      req.session.userId = user.id;
-      req.session.save(saveErr => {
-        if (saveErr) return res.status(500).json({
-          success: false, message: "Could not save login."
-        });
-        res.json({ success: true, username: user.username });
-      });
-    });
-  } catch (err) {
-    console.error("Login:", err);
-    res.status(500).json({ success: false, message: "Login failed." });
+  if (!user || !(await bcrypt.compare(password, user.password))) {
+    return res.status(401).json({ error: "Incorrect username or password." });
   }
-});
 
-app.post("/api/logout", (req, res) => {
-  req.session.destroy(err => {
-    if (err) return res.status(500).json({ success: false });
-    res.clearCookie("darkmess.sid");
-    res.json({ success: true });
+  req.session.regenerate(err => {
+    if (err) return res.status(500).json({ error: "Login failed." });
+    req.session.username = user.username;
+    res.json({ ok: true, username: user.username });
   });
 });
 
-app.get("/api/users", requireLogin, async (req, res) => {
+app.post("/api/logout", (req, res) => {
+  const username = currentUser(req);
+  if (username) io.to(username).emit("user offline", username);
+
+  req.session.destroy(() => {
+    res.clearCookie("connect.sid");
+    res.json({ ok: true });
+  });
+});
+
+app.patch("/api/profile", requireLogin, async (req, res) => {
+  const oldUsername = currentUser(req);
+  const newUsername = req.body.username === undefined
+    ? oldUsername
+    : String(req.body.username).trim();
+
+  const displayName = req.body.displayName === undefined
+    ? undefined
+    : String(req.body.displayName).trim().slice(0, 40);
+
+  if (!cleanUsername(newUsername)) {
+    return res.status(400).json({ error: "Username must be 3–20 letters, numbers, or underscores." });
+  }
+
   try {
-    const users = await db.all(
-      "SELECT username FROM users WHERE LOWER(username) != LOWER(?) ORDER BY username",
-      req.session.username
-    );
-    res.json({
-      users: users.map(u => ({
-        username: u.username,
-        online: (online.get(u.username.toLowerCase()) || 0) > 0
-      }))
-    });
-  } catch (err) {
-    console.error("Users:", err);
-    res.status(500).json({ success: false, message: "Could not load users." });
+    const user = await db.get("SELECT * FROM users WHERE username = ?", oldUsername);
+    if (!user) return res.status(404).json({ error: "Account not found." });
+
+    if (newUsername !== oldUsername) {
+      await db.run("UPDATE users SET username = ? WHERE username = ?", newUsername, oldUsername);
+      await db.run("UPDATE messages SET username = ? WHERE username = ?", newUsername, oldUsername);
+      await db.run("UPDATE messages SET recipient = ? WHERE recipient = ?", newUsername, oldUsername);
+      req.session.username = newUsername;
+    }
+
+    if (displayName !== undefined) {
+      await db.run(
+        "UPDATE users SET display_name = ? WHERE username = ?",
+        displayName || newUsername, newUsername
+      );
+    }
+
+    res.json({ ok: true, username: newUsername });
+  } catch (error) {
+    if (error.code === "SQLITE_CONSTRAINT") {
+      return res.status(409).json({ error: "That username is already taken." });
+    }
+    console.error(error);
+    res.status(500).json({ error: "Could not update profile." });
   }
 });
 
-io.use((socket, next) => {
-  const s = socket.request.session;
-  if (!s || !s.username) return next(new Error("Please log in."));
-  socket.username = s.username;
-  next();
+app.post("/api/profile-picture", requireLogin, upload.single("image"), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "Choose an image first." });
+
+  const url = "/uploads/" + req.file.filename;
+  await db.run(
+    "UPDATE users SET profile_picture = ? WHERE username = ?",
+    url, currentUser(req)
+  );
+  res.json({ ok: true, profilePicture: url });
 });
 
+app.post("/api/message-image", requireLogin, upload.single("image"), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "Choose an image first." });
+  res.json({ url: "/uploads/" + req.file.filename });
+});
+
+app.get("/api/users", requireLogin, async (req, res) => {
+  const me = currentUser(req);
+  const q = String(req.query.q || "").trim().replace(/^@/, "");
+
+  const users = await db.all(
+    `SELECT username, display_name, profile_picture
+     FROM users
+     WHERE username != ?
+       AND (username LIKE ? OR COALESCE(display_name, '') LIKE ?)
+     ORDER BY username LIMIT 50`,
+    me, `%${q}%`, `%${q}%`
+  );
+
+  res.json(users.map(u => ({
+    ...publicUser(u),
+    online: onlineUsers.has(u.username)
+  })));
+});
+
+app.get("/api/inbox", requireLogin, async (req, res) => {
+  const me = currentUser(req);
+
+  const people = await db.all(
+    `SELECT DISTINCT u.username, u.display_name, u.profile_picture
+     FROM users u
+     JOIN messages m
+       ON (m.username = u.username AND m.recipient = ?)
+       OR (m.recipient = u.username AND m.username = ?)
+     WHERE u.username != ?
+     ORDER BY u.username`,
+    me, me, me
+  );
+
+  res.json(people.map(u => ({
+    ...publicUser(u),
+    online: onlineUsers.has(u.username)
+  })));
+});
+
+const onlineUsers = new Set();
+
 io.on("connection", socket => {
-  const username = socket.username;
-  const key = username.toLowerCase();
-  socket.join(room(username));
-  online.set(key, (online.get(key) || 0) + 1);
-  io.emit("user online", { username });
+  const username = socket.request.session?.username;
+  if (!username) return socket.disconnect(true);
+
+  socket.join(username);
+  onlineUsers.add(username);
+  io.emit("user online", username);
+  io.emit("online users", [...onlineUsers]);
 
   socket.on("open conversation", async data => {
-    try {
-      const other = typeof data?.with === "string" ? data.with.trim() : "";
-      if (!other || other.toLowerCase() === key) return;
+    const target = String(data?.with || "");
+    if (!target || target === username) return;
 
-      const target = await db.get(
-        "SELECT username FROM users WHERE LOWER(username)=LOWER(?)", other
-      );
-      if (!target) return;
+    const exists = await db.get("SELECT id FROM users WHERE username = ?", target);
+    if (!exists) return;
 
-      const history = await db.all(`
-        SELECT id, username AS user, username, text, timestamp
-        FROM messages
-        WHERE (LOWER(username)=LOWER(?) AND LOWER(recipient)=LOWER(?))
-           OR (LOWER(username)=LOWER(?) AND LOWER(recipient)=LOWER(?))
-        ORDER BY id DESC LIMIT 100
-      `, [username, target.username, target.username, username]);
+    const history = await db.all(
+      `SELECT id, username AS user, username, text, timestamp, recipient, image
+       FROM messages
+       WHERE (username = ? AND recipient = ?)
+          OR (username = ? AND recipient = ?)
+       ORDER BY id ASC LIMIT 500`,
+      username, target, target, username
+    );
 
-      socket.emit("chat history", history.reverse());
-    } catch (err) {
-      console.error("History:", err);
-    }
+    socket.emit("chat history", history);
   });
 
   socket.on("chat message", async data => {
     try {
-      const text = typeof data?.text === "string" ? data.text.trim() : "";
-      const to = typeof data?.to === "string" ? data.to.trim() : "";
-      if (!text || text.length > 4000 || !to || to.toLowerCase() === key) return;
+      const target = String(data?.to || "");
+      const messageText = typeof data?.text === "string" ? data.text.trim() : "";
+      const image = typeof data?.image === "string" ? data.image : null;
 
-      const target = await db.get(
-        "SELECT username FROM users WHERE LOWER(username)=LOWER(?)", to
+      if (!target || target === username || (!messageText && !image)) return;
+      if (messageText.length > 4000) return;
+
+      const recipientExists = await db.get(
+        "SELECT username FROM users WHERE username = ?", target
       );
-      if (!target) {
-        socket.emit("chat error", { message: "User not found." });
-        return;
-      }
+      if (!recipientExists) return;
+
+      if (image && !/^\/uploads\/[a-zA-Z0-9._-]+$/.test(image)) return;
 
       const result = await db.run(
-        "INSERT INTO messages (username,text,recipient) VALUES (?,?,?)",
-        [username, text, target.username]
+        `INSERT INTO messages (username, text, recipient, image)
+         VALUES (?, ?, ?, ?)`,
+        username, messageText, target, image
       );
 
-      const message = {
-        id: result.lastID,
-        user: username,
-        username,
-        text,
-        timestamp: new Date().toISOString(),
-        recipient: target.username
-      };
-      io.to(room(username)).emit("chat message", message);
-      io.to(room(target.username)).emit("chat message", message);
-    } catch (err) {
-      console.error("Message:", err);
-      socket.emit("chat error", { message: "Could not send message." });
+      const message = await db.get(
+        `SELECT id, username AS user, username, text, timestamp, recipient, image
+         FROM messages WHERE id = ?`,
+        result.lastID
+      );
+
+      io.to(username).to(target).emit("chat message", message);
+    } catch (error) {
+      console.error("Message error:", error);
     }
   });
 
   socket.on("disconnect", () => {
-    const count = Math.max(0, (online.get(key) || 1) - 1);
-    if (count) online.set(key, count);
-    else {
-      online.delete(key);
-      io.emit("user offline", { username });
+    const stillConnected = [...io.sockets.sockets.values()].some(
+      s => s.request.session?.username === username
+    );
+    if (!stillConnected) {
+      onlineUsers.delete(username);
+      io.emit("user offline", username);
+      io.emit("online users", [...onlineUsers]);
     }
   });
 });
 
-initDB().then(() => {
+app.use((err, req, res, next) => {
+  console.error(err.message);
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ error: "Image too large. Maximum size is 8 MB." });
+  }
+  res.status(400).json({ error: err.message || "Request failed." });
+});
+
+initDatabase().then(() => {
   server.listen(PORT, "0.0.0.0", () => {
-    console.log(`darkmess is running on port ${PORT}`);
+    console.log("Darkmess running on port " + PORT);
   });
-}).catch(err => {
-  console.error("Database startup failed:", err);
+}).catch(error => {
+  console.error("Startup failed:", error);
   process.exit(1);
 });
-              
+    
