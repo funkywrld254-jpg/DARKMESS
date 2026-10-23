@@ -507,14 +507,8 @@ io.on("connection", socket => {
       onlineCounts.set(key, remaining);
     }
   });
-});
-
-app.use((err, _req, res, _next) => {
-  console.error("Unexpected server error:", err);
-  res.status(500).json({
-    success: false,
-    message: "An unexpected server error occurred."
-  });
+  app.get("/", (_req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
 initializeDatabase()
