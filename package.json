@@ -1,6 +1,7 @@
 {
   "name": "darkmess",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "Secure community chatroom with permanent storage",
   "main": "server.js",
   "scripts": {
