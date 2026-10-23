@@ -3,31 +3,34 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>darkmess</title>
 <script src="/socket.io/socket.io.js"></script>
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#080808;color:white;font-family:Arial,sans-serif}
-header{padding:18px;background:#111;border-bottom:2px solid #ff2438}
-h1{margin:0;color:#ff2438}
-main{max-width:650px;margin:25px auto;padding:15px}
-.panel{background:#141414;border:1px solid #333;border-radius:14px;padding:20px;margin-bottom:15px}
-input,button{width:100%;padding:13px;margin:7px 0;border-radius:8px;font-size:16px}
-input{background:#080808;color:white;border:1px solid #444}
-button{background:#ff2438;color:white;border:0;font-weight:bold;cursor:pointer}
-button:hover{background:#d8172a}
-.secondary{background:#292929}
+body{margin:0;background:#080808;color:#fff;font-family:Arial,sans-serif}
+header{padding:18px;background:#141414;border-bottom:2px solid #f23}
+h1{margin:0;color:#f23}
+main{max-width:650px;margin:20px auto;padding:12px}
+.panel{background:#151515;border:1px solid #333;border-radius:12px;padding:18px;margin-bottom:14px}
+input,select,button{width:100%;padding:13px;margin:6px 0;border-radius:8px;font-size:16px}
+input,select{background:#090909;color:#fff;border:1px solid #444}
+button{background:#f23;color:white;border:0;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.5}
+.secondary{background:#333}
 #chat{display:none}
-#messages{height:330px;overflow-y:auto;border:1px solid #333;padding:12px;border-radius:8px}
-.message{background:#222;padding:10px;margin:8px 0;border-radius:9px;overflow-wrap:anywhere}
-.mine{border-left:3px solid #ff2438}
+#messages{height:300px;overflow-y:auto;padding:10px;background:#090909;border:1px solid #333;border-radius:8px}
+.message{background:#222;padding:10px;margin:8px 0;border-radius:8px;overflow-wrap:anywhere}
+.mine{border-left:3px solid #f23}
 .small{color:#aaa;font-size:13px}
-#status{color:#ff6877}
+#status,#chatStatus{color:#ff6877}
 </style>
 </head>
 <body>
-<header><h1>darkmess</h1><div class="small">Your space. Your conversations.</div></header>
+<header>
+<h1>darkmess</h1>
+<div class="small">Your space. Your conversations.</div>
+</header>
 
 <main>
 <section class="panel" id="auth">
@@ -35,7 +38,7 @@ button:hover{background:#d8172a}
 <form id="authForm">
 <input id="username" placeholder="Username" required autocomplete="username">
 <input id="password" type="password" placeholder="Password" required autocomplete="current-password">
-<button id="submitBtn" type="submit">Log in</button>
+<button id="submitBtn">Log in</button>
 </form>
 <button class="secondary" id="switchBtn" type="button">Create an account</button>
 <p id="status"></p>
@@ -43,14 +46,15 @@ button:hover{background:#d8172a}
 
 <section class="panel" id="chat">
 <h2>Welcome, <span id="who"></span></h2>
-<p class="small">darkmess chat</p>
+<label for="people">Choose who to message</label>
+<select id="people"><option value="">Loading users...</option></select>
 <div id="messages"></div>
 <form id="messageForm">
-<input id="messageInput" placeholder="Write a message..." maxlength="2000" required>
-<button type="submit">Send message</button>
+<input id="messageInput" placeholder="Write a message..." maxlength="4000" required>
+<button id="sendBtn">Send message</button>
 </form>
-<button class="secondary" id="logoutBtn" type="button">Log out</button>
 <p id="chatStatus" class="small"></p>
+<button class="secondary" id="logoutBtn" type="button">Log out</button>
 </section>
 </main>
 
@@ -58,87 +62,86 @@ button:hover{background:#d8172a}
 const $ = id => document.getElementById(id);
 let isSignup = false;
 let currentUser = "";
+let selectedUser = "";
 let socket = null;
 
-function status(message){
+function showStatus(message) {
   $("status").textContent = message;
 }
 
-$("switchBtn").addEventListener("click", () => {
+$("switchBtn").onclick = () => {
   isSignup = !isSignup;
   $("authTitle").textContent = isSignup ? "Create account" : "Log in";
   $("submitBtn").textContent = isSignup ? "Sign up" : "Log in";
-  $("switchBtn").textContent = isSignup ? "I already have an account" : "Create an account";
-  $("password").autocomplete = isSignup ? "new-password" : "current-password";
-  status("");
-});
+  $("switchBtn").textContent = isSignup
+    ? "I already have an account" : "Create an account";
+  showStatus("");
+};
 
-$("authForm").addEventListener("submit", async event => {
+$("authForm").onsubmit = async event => {
   event.preventDefault();
-  const username = $("username").value.trim();
-  const password = $("password").value;
-  if (!username || !password) return status("Enter your username and password.");
-
   $("submitBtn").disabled = true;
-  status("Please wait...");
+  showStatus("Please wait...");
 
   try {
     const response = await fetch(isSignup ? "/api/signup" : "/api/login", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({username, password})
+      credentials: "same-origin",
+      body: JSON.stringify({
+        username: $("username").value.trim(),
+        password: $("password").value
+      })
     });
 
     const data = await response.json();
     if (!response.ok || !data.success) {
-      throw new Error(data.error || "Unable to continue.");
+      throw new Error(data.message || data.error || "Could not log in.");
     }
 
-    openChat(data.username || username);
-  } catch (error) {
-    status(error.message || "Connection failed. Try again.");
+    openChat(data.username);
+  } catch (err) {
+    showStatus(err.message || "Connection failed.");
   } finally {
     $("submitBtn").disabled = false;
   }
-});
+};
 
-function addMessage(data) {
-  if (!data) return;
-  const item = document.createElement("div");
-  item.className = "message" +
-    (data.user === currentUser ? " mine" : "");
-
-  const name = document.createElement("strong");
-  name.textContent = data.user || "User";
-
-  const content = document.createElement("div");
-  content.textContent = typeof data.text === "string" ? data.text : "";
-
-  item.append(name, content);
-  $("messages").appendChild(item);
-  $("messages").scrollTop = $("messages").scrollHeight;
-}
-
-function openChat(username) {
+async function openChat(username) {
   currentUser = username;
   $("who").textContent = username;
   $("auth").style.display = "none";
   $("chat").style.display = "block";
-  $("messages").replaceChildren();
+  $("chatStatus").textContent = "Connecting...";
+  $("people").innerHTML = '<option value="">Choose a user</option>';
 
+  try {
+    const response = await fetch("/api/users", {
+      credentials: "same-origin"
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || "Could not load users.");
+
+    data.users.forEach(user => {
+      const option = document.createElement("option");
+      option.value = user.username;
+      option.textContent = user.username + (user.online ? " • online" : "");
+      $("people").appendChild(option);
+    });
+  } catch (err) {
+    $("chatStatus").textContent = err.message;
+  }
+
+  if (socket) socket.disconnect();
   socket = io();
 
   socket.on("connect", () => {
-    $("chatStatus").textContent = "Connected";
-    socket.emit("join chat", currentUser);
+    $("chatStatus").textContent = "Connected.";
+    if (selectedUser) openSelectedConversation();
   });
 
   socket.on("connect_error", () => {
-    $("chatStatus").textContent = "Chat connection failed. Refresh and try again.";
-  });
-
-  socket.on("disconnect", () => {
-    $("chatStatus").textContent = "Disconnected. Reconnecting...";
+    $("chatStatus").textContent = "Chat connection failed. Refresh the page.";
   });
 
   socket.on("chat history", history => {
@@ -146,34 +149,92 @@ function openChat(username) {
     history.forEach(addMessage);
   });
 
-  socket.on("chat message", addMessage);
+  socket.on("chat message", message => {
+    if (!selectedUser) return;
+    const from = (message.username || message.user || "").toLowerCase();
+    const to = (message.recipient || "").toLowerCase();
+    if ((from === currentUser.toLowerCase() &&
+         to === selectedUser.toLowerCase()) ||
+        (from === selectedUser.toLowerCase() &&
+         to === currentUser.toLowerCase())) {
+      addMessage(message);
+    }
+  });
+
+  socket.on("chat error", data => {
+    $("chatStatus").textContent = data.message || "Message failed.";
+  });
 }
 
-$("messageForm").addEventListener("submit", event => {
-  event.preventDefault();
-  const text = $("messageInput").value.trim();
-  if (!text || !socket || !socket.connected) {
-    $("chatStatus").textContent = "Not connected to chat yet.";
-    return;
+function openSelectedConversation() {
+  if (!socket || !socket.connected || !selectedUser) return;
+  $("messages").replaceChildren();
+  socket.emit("open conversation", {with: selectedUser});
+}
+
+$("people").onchange = () => {
+  selectedUser = $("people").value;
+  openSelectedConversation();
+};
+
+function addMessage(message) {
+  const item = document.createElement("div");
+  item.className = "message";
+  if ((message.username || message.user) === currentUser) {
+    item.classList.add("mine");
   }
 
-  socket.emit("chat message", text);
+  const sender = document.createElement("strong");
+  sender.textContent = message.user || message.username || "User";
+
+  const text = document.createElement("div");
+  text.textContent = message.text || "";
+
+  const time = document.createElement("div");
+  time.className = "small";
+  time.textContent = message.timestamp
+    ? new Date(message.timestamp).toLocaleString() : "";
+
+  item.append(sender, text, time);
+  $("messages").appendChild(item);
+  $("messages").scrollTop = $("messages").scrollHeight;
+}
+
+$("messageForm").onsubmit = event => {
+  event.preventDefault();
+  const text = $("messageInput").value.trim();
+
+  if (!selectedUser) {
+    $("chatStatus").textContent = "Choose a user first.";
+    return;
+  }
+  if (!socket || !socket.connected) {
+    $("chatStatus").textContent = "Not connected. Refresh and try again.";
+    return;
+  }
+  if (!text) return;
+
+  socket.emit("chat message", {text, to: selectedUser});
   $("messageInput").value = "";
-});
+};
 
-$("logoutBtn").addEventListener("click", async () => {
+$("logoutBtn").onclick = async () => {
   if (socket) socket.disconnect();
-
   try {
-    await fetch("/api/logout", {method:"POST"});
-  } catch (_) {}
-
-  currentUser = "";
-  $("chat").style.display = "none";
-  $("auth").style.display = "block";
-  $("password").value = "";
-  status("You have logged out.");
-});
+    await fetch("/api/logout", {
+      method: "POST",
+      credentials: "same-origin"
+    });
+  } finally {
+    currentUser = "";
+    selectedUser = "";
+    $("chat").style.display = "none";
+    $("auth").style.display = "block";
+    $("password").value = "";
+    showStatus("Logged out.");
+  }
+};
 </script>
 </body>
-</html>
+  </html>
+  
