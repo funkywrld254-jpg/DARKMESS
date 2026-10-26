@@ -4,447 +4,281 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Darkmess</title>
+<title>darkmess</title>
 <style>
-:root{color-scheme:dark;--red:#ff304f;--panel:#17171c;--muted:#a4a4b0}
+:root{--bg:#080808;--panel:#111;--red:#ff2638;--line:#292929;--muted:#999}
 *{box-sizing:border-box}
-body{margin:0;background:#0b0b0f;color:#fff;font:15px Arial,sans-serif}
+body{margin:0;background:var(--bg);color:#fff;font:15px Arial,sans-serif}
 button,input{font:inherit}
-button{cursor:pointer}
-input{min-width:0}
+button{cursor:pointer;border:0;border-radius:10px;background:var(--red);color:#fff;padding:11px 14px;font-weight:bold}
+input{background:#090909;border:1px solid #303030;color:#fff;padding:12px;border-radius:10px;width:100%}
 .hidden{display:none!important}
-header{padding:17px 20px;border-bottom:1px solid #292930;display:flex;justify-content:space-between;align-items:center}
-.logo{font-size:23px;font-weight:800;color:var(--red)}
-main{max-width:1050px;margin:20px auto;padding:0 12px}
-.panel{background:var(--panel);border:1px solid #292930;border-radius:15px;padding:16px}
-button,.btn{border:0;border-radius:9px;background:var(--red);color:white;padding:11px 14px;font-weight:700}
-.secondary{background:#292930}
-input{background:#0d0d12;border:1px solid #34343d;color:white;border-radius:9px;padding:12px;width:100%;outline:none}
-input:focus{border-color:var(--red)}
-.auth{max-width:410px;margin:50px auto}
-.auth form{display:grid;gap:12px}
-.auth h1{margin-top:0}
-.muted{color:var(--muted);font-size:13px}
-.error{color:#ff7185;min-height:18px}
-.layout{display:grid;grid-template-columns:290px 1fr;gap:14px}
-.side{display:flex;flex-direction:column;gap:12px}
-.profile{display:flex;align-items:center;gap:12px}
-.avatar{width:43px;height:43px;border-radius:50%;object-fit:cover;background:#303039;display:flex;align-items:center;justify-content:center;font-weight:bold;color:white;flex-shrink:0}
-.person{display:flex;align-items:center;gap:10px;text-align:left;background:transparent;color:white;width:100%;padding:10px;border-radius:10px}
-.person:hover,.person.active{background:#292930}
-.person-info{min-width:0;flex:1}
-.person-info strong,.person-info small{display:block;overflow:hidden;text-overflow:ellipsis}
-.person-info small{color:var(--muted);margin-top:4px}
-.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#666;margin-right:5px}
-.dot.online{background:#3ddc84}
-.people{max-height:250px;overflow:auto}
-.chat{display:flex;flex-direction:column;min-height:65vh}
-.chat-head{display:flex;align-items:center;gap:10px;padding-bottom:12px;border-bottom:1px solid #303039}
-.messages{flex:1;overflow-y:auto;min-height:280px;max-height:55vh;padding:15px 0;display:flex;flex-direction:column;gap:10px}
-.bubble{max-width:82%;align-self:flex-start;background:#292930;padding:10px 12px;border-radius:13px;overflow-wrap:anywhere}
-.bubble.mine{align-self:flex-end;background:#8d1830}
-.bubble img{display:block;max-width:100%;max-height:300px;border-radius:8px;margin-top:5px}
-.bubble time{display:block;font-size:10px;color:#ddd;margin-top:6px}
-.composer{display:flex;gap:8px;align-items:center;border-top:1px solid #303039;padding-top:12px}
-.composer input[type=text]{flex:1}
-#imagePick{display:none}
-.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.section-title{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:4px 0}
-.profile-form{display:grid;gap:9px}
-.status{min-height:20px;color:#8fe5ad;font-size:13px}
-@media(max-width:700px){main{margin:12px auto}.layout{grid-template-columns:1fr}.chat{min-height:55vh}.messages{max-height:42vh}.side{order:1}.chat-panel{order:2}.people{max-height:170px}.auth{margin:25px auto}}
+.brand{font-size:25px;font-weight:900}.brand span{color:var(--red)}
+.muted,.preview{color:var(--muted)}
+.error{color:#ff6672;min-height:20px}
+.auth{max-width:390px;margin:9vh auto;padding:25px;background:var(--panel);border:1px solid var(--line);border-radius:18px}
+.stack{display:grid;gap:12px}
+.auth h2{margin:24px 0 8px}
+.switch{background:transparent;border:1px solid #333;width:100%}
+.app{height:100dvh;display:grid;grid-template-columns:310px 1fr;max-width:1200px;margin:auto}
+.sidebar{min-height:0;border-right:1px solid var(--line);display:flex;flex-direction:column;background:#0c0c0c}
+.sidehead{padding:18px;border-bottom:1px solid var(--line)}
+.search{margin-top:15px}
+.people{overflow:auto;padding:8px;flex:1}
+.person{display:flex;align-items:center;gap:11px;padding:12px;border-radius:12px;cursor:pointer}
+.person:hover,.person.active{background:#1b1b1b}
+.avatar{width:42px;height:42px;flex:0 0 42px;border-radius:50%;background:#292929;display:grid;place-items:center;overflow:hidden;border:1px solid #333;font-weight:bold}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.personname{font-weight:bold}.preview{font-size:12px;margin-top:5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.sidefoot{padding:12px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center}
+.sidefoot button{padding:9px;font-size:12px}
+.profilebox{padding:14px;border-bottom:1px solid var(--line)}
+.profilebox input{margin-top:8px}
+.chat{min-width:0;display:flex;flex-direction:column}
+.chathead{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:11px;min-height:72px}
+.chatbody{flex:1;min-height:0;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:10px}
+.welcome{margin:auto;text-align:center;color:var(--muted);padding:25px}
+.bubble{max-width:min(75%,560px);background:#1a1a1a;border:1px solid #2b2b2b;border-radius:16px 16px 16px 4px;padding:10px 12px;overflow-wrap:anywhere}
+.bubble.mine{align-self:flex-end;background:#421219;border-color:#70202a;border-radius:16px 16px 4px 16px}
+.bubble img,.bubble video{max-width:100%;max-height:320px;border-radius:10px;display:block;margin-top:6px}
+.bubble audio{max-width:100%;margin-top:6px}
+.bubble a{color:#ff7883}.stamp{font-size:10px;color:#aaa;margin-top:6px;text-align:right}
+.typing{color:var(--muted);font-size:12px;min-height:17px;padding:0 20px}
+.composer{padding:12px;border-top:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.composer input[type=text]{flex:1;min-width:0}
+.filelabel{display:inline-grid;place-items:center;background:#202020;border:1px solid #333;border-radius:10px;width:42px;height:42px;cursor:pointer;flex:0 0 42px}
+.filelabel input{display:none}
+.iconbtn{background:#202020;border:1px solid #333}
+.small{font-size:12px}
+.mobileback{display:none}
+@media(max-width:680px){
+ .app{grid-template-columns:1fr;border:0}
+ .sidebar{grid-column:1;grid-row:1}
+ .chat{grid-column:1;grid-row:1;display:none}
+ .app.chat-open .sidebar{display:none}
+ .app.chat-open .chat{display:flex}
+ .sidehead{padding:14px}
+ .chatbody{padding:14px}
+ .bubble{max-width:88%}
+ .mobileback{display:inline-block;background:#222;padding:8px 10px}
+ .composer{padding:9px;gap:6px}
+}
 </style>
 </head>
 <body>
-<header>
-  <div class="logo">darkmess</div>
-  <button id="logout" class="secondary hidden">Log out</button>
-</header>
-
-<main>
-<section id="auth" class="panel auth">
-  <h1 id="authTitle">Welcome back</h1>
-  <p class="muted">Private, direct conversations.</p>
-  <form id="authForm">
-    <input id="displayName" placeholder="Your display name (for signup)" maxlength="40" class="hidden">
-    <input id="username" placeholder="Username" autocomplete="username" required>
-    <input id="password" type="password" placeholder="Password" autocomplete="current-password" required>
-    <button id="authSubmit">Log in</button>
-  </form>
-  <p id="authError" class="error"></p>
-  <button id="toggleAuth" class="secondary">Create an account</button>
+<section id="auth" class="auth">
+ <div class="brand">dark<span>mess</span></div>
+ <h2 id="authTitle">Sign in</h2>
+ <p class="muted">Private chats. One simple place.</p>
+ <form id="authForm" class="stack">
+  <input id="username" autocomplete="username" placeholder="Username" minlength="3" maxlength="20" required>
+  <input id="password" type="password" autocomplete="current-password" placeholder="Password" minlength="6" required>
+  <button id="authSubmit">Sign in</button>
+ </form>
+ <p id="authError" class="error"></p>
+ <button id="authSwitch" class="switch">Create account</button>
 </section>
 
-<section id="app" class="hidden">
-  <div class="layout">
-    <aside class="side">
-      <div class="panel">
-        <div class="profile">
-          <img id="myPicture" class="avatar hidden" alt="Profile">
-          <div id="myInitial" class="avatar">D</div>
-          <div style="min-width:0">
-            <strong id="myName">Your profile</strong>
-            <div class="muted" id="myHandle">@username</div>
-          </div>
-        </div>
-        <div class="actions">
-          <button id="editToggle" class="secondary">Edit profile</button>
-          <label class="btn secondary" for="profilePick">Photo</label>
-          <input id="profilePick" type="file" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden">
-        </div>
-        <form id="profileForm" class="profile-form hidden" style="margin-top:12px">
-          <input id="editDisplayName" placeholder="Display name" maxlength="40">
-          <input id="editUsername" placeholder="Username" maxlength="20">
-          <button>Save profile</button>
-          <div id="profileStatus" class="status"></div>
-        </form>
-      </div>
-
-      <div class="panel">
-        <p class="section-title">Find people</p>
-        <input id="search" placeholder="Search usernames..." autocomplete="off">
-        <div id="searchResults" class="people"></div>
-      </div>
-
-      <div class="panel">
-        <p class="section-title">Your inbox</p>
-        <div id="inbox" class="people"></div>
-      </div>
-    </aside>
-
-    <section class="panel chat-panel">
-      <div class="chat">
-        <div class="chat-head">
-          <div id="chatAvatar" class="avatar">D</div>
-          <div>
-            <strong id="chatName">Your messages</strong>
-            <div id="chatStatus" class="muted">Choose someone to start chatting</div>
-          </div>
-        </div>
-        <div id="messages" class="messages">
-          <p class="muted">Your direct messages will appear here.</p>
-        </div>
-        <form id="messageForm" class="composer">
-          <label class="btn secondary" for="imagePick" title="Send photo or GIF">＋</label>
-          <input id="imagePick" type="file" accept="image/png,image/jpeg,image/gif,image/webp">
-          <input id="messageText" type="text" maxlength="4000" placeholder="Write a message..." autocomplete="off">
-          <button id="sendButton">Send</button>
-        </form>
-        <div id="chatError" class="error"></div>
-      </div>
-    </section>
+<main id="app" class="app hidden">
+ <aside class="sidebar">
+  <div class="sidehead">
+   <div class="brand">dark<span>mess</span></div>
+   <input id="search" class="search" placeholder="Search people..." autocomplete="off">
+   <p class="muted small">Search by username or display name</p>
   </div>
-</section>
+  <div id="people" class="people"></div>
+  <div class="profilebox">
+   <div class="small muted">YOUR PROFILE</div>
+   <input id="displayName" maxlength="40" placeholder="Display name">
+   <div style="display:flex;gap:8px;margin-top:8px">
+    <button id="saveProfile" class="iconbtn">Save name</button>
+    <label class="filelabel" title="Change profile photo">📷<input id="profileFile" type="file" accept="image/*"></label>
+   </div>
+  </div>
+  <div class="sidefoot">
+   <div id="myAvatar" class="avatar">?</div>
+   <div style="min-width:0;flex:1"><div id="myName" class="personname"></div><div id="myUsername" class="preview"></div></div>
+   <button id="logout" class="iconbtn">Log out</button>
+  </div>
+ </aside>
+
+ <section class="chat">
+  <header class="chathead">
+   <button id="back" class="mobileback">←</button>
+   <div id="chatAvatar" class="avatar">D</div>
+   <div><div id="chatName" class="personname">Choose a chat</div><div id="chatStatus" class="preview">Search for people to start</div></div>
+  </header>
+  <div id="chatBody" class="chatbody"><div class="welcome"><div class="brand">dark<span>mess</span></div><p>Choose someone to start messaging.</p></div></div>
+  <div id="typing" class="typing"></div>
+  <form id="composer" class="composer">
+   <label class="filelabel" title="Attach media">＋<input id="mediaFile" type="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/mp4,audio/ogg,audio/wav,audio/webm,application/pdf,text/plain"></label>
+   <input id="message" type="text" maxlength="5000" placeholder="Write a message..." autocomplete="off">
+   <button id="send" type="submit">Send</button>
+  </form>
+  <div id="chatError" class="error" style="padding:0 12px"></div>
+ </section>
 </main>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-const $ = id => document.getElementById(id);
-let signupMode = false;
-let me = null;
-let activeChat = null;
-let socket = null;
-let online = new Set();
+const $=id=>document.getElementById(id);
+let me=null,peer=null,socket=null,isSignup=false,peopleCache=[],onlineUsers=new Set(),typingTimer=null,selectedMedia=null;
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+async function api(url,options={}){
+ const r=await fetch(url,{credentials:"same-origin",...options});
+ const d=await r.json().catch(()=>({}));
+ if(!r.ok)throw new Error(d.error||"Request failed");
+ return d;
+}
+function avatarHtml(u){return u?.profile_picture?`<img src="${esc(u.profile_picture)}" alt="">`:esc((u?.display_name||u?.username||"?").slice(0,1).toUpperCase())}
+function setAvatar(el,u){el.innerHTML=avatarHtml(u)}
+function err(id,msg){$(id).textContent=msg||""}
 
-async function api(url, options = {}) {
-  const response = await fetch(url, {
-    credentials: "same-origin",
-    ...options,
-    headers: {
-      ...(options.body instanceof FormData ? {} : {"Content-Type":"application/json"}),
-      ...(options.headers || {})
-    }
+$("authSwitch").onclick=()=>{
+ isSignup=!isSignup;
+ $("authTitle").textContent=isSignup?"Create account":"Sign in";
+ $("authSubmit").textContent=isSignup?"Create account":"Sign in";
+ $("authSwitch").textContent=isSignup?"I already have an account":"Create account";
+ $("password").autocomplete=isSignup?"new-password":"current-password";
+ err("authError","");
+};
+$("authForm").onsubmit=async e=>{
+ e.preventDefault();err("authError","");$("authSubmit").disabled=true;
+ try{
+  const d=await api(isSignup?"/api/signup":"/api/login",{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({username:$("username").value,password:$("password").value})
   });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "Something went wrong.");
-  return data;
+  await startApp(d.user);
+ }catch(e){err("authError",e.message)}
+ finally{$("authSubmit").disabled=false}
+};
+async function start(){
+ try{const d=await api("/api/me");if(d.user)await startApp(d.user)}catch{}
 }
-
-function escapeText(value) {
-  return String(value || "").replace(/[&<>"']/g, c => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-  }[c]));
+async function startApp(user){
+ me=user;$("auth").classList.add("hidden");$("app").classList.remove("hidden");
+ $("displayName").value=user.display_name||user.username;
+ $("myName").textContent=user.display_name||user.username;
+ $("myUsername").textContent="@"+user.username;setAvatar($("myAvatar"),user);
+ socket=io();wireSocket();await loadPeople("");
 }
-
-function avatarMarkup(user) {
-  if (user.profilePicture) {
-    return '<img class="avatar" alt="" src="' + escapeText(user.profilePicture) + '">';
+function wireSocket(){
+ socket.on("connect_error",()=>err("chatError","Connection issue. Refresh and log in again."));
+ socket.on("presence",users=>{onlineUsers=new Set(users);renderPeople();if(peer)updateChatStatus()});
+ socket.on("conversation history",messages=>{if(peer)renderMessages(messages)});
+ socket.on("new message",m=>{
+  if(peer&&(m.username===peer||m.recipient===peer)){
+   addMessage(m);
+   if(m.username!==me.username)socket.emit("open conversation",peer);
   }
-  const initial = (user.displayName || user.username || "?").charAt(0).toUpperCase();
-  return '<div class="avatar">' + escapeText(initial) + '</div>';
+  loadPeople($("search").value);
+ });
+ socket.on("typing",u=>{if(u===peer)$("typing").textContent=u+" is typing…"});
+ socket.on("stop typing",u=>{if(u===peer)$("typing").textContent=""});
+ socket.on("chat error",m=>err("chatError",m));
 }
-
-function personButton(user) {
-  const name = user.displayName || user.username;
-  return '<button class="person ' + (activeChat === user.username ? 'active' : '') +
-    '" data-user="' + escapeText(user.username) + '">' +
-    avatarMarkup(user) +
-    '<span class="person-info"><strong>' + escapeText(name) +
-    '</strong><small><span class="dot ' + (user.online ? 'online' : '') +
-    '"></span>@' + escapeText(user.username) + '</small></span></button>';
+async function loadPeople(q){
+ try{
+  const [u,i]=await Promise.all([
+   api("/api/users?q="+encodeURIComponent(q)),
+   api("/api/inbox")
+  ]);
+  peopleCache=u.users||[];
+  const map=new Map();
+  (i.conversations||[]).forEach(c=>map.set(c.user.username,{...c.user,preview:c.text||(c.media_url?"📎 Attachment":"Start a conversation")}));
+  peopleCache.forEach(p=>{if(!map.has(p.username))map.set(p.username,p)});
+  renderPeople([...map.values()]);
+ }catch(e){$("people").innerHTML=`<p class="muted">${esc(e.message)}</p>`}
 }
-
-function attachPersonClicks(container) {
-  container.querySelectorAll("[data-user]").forEach(button => {
-    button.addEventListener("click", () => openChat(button.dataset.user));
-  });
+function renderPeople(list){
+ list=list||peopleCache;
+ const q=$("search").value.trim().toLowerCase();
+ if(q)list=list.filter(p=>(p.username+" "+(p.display_name||"")).toLowerCase().includes(q));
+ if(!list.length){
+  $("people").innerHTML=`<p class="muted" style="padding:12px">${q?"No users found. Check the spelling.":"No other users yet. Create a second account to test chats."}</p>`;
+  return;
+ }
+ $("people").innerHTML=list.map(p=>`<div class="person ${peer===p.username?"active":""}" data-user="${esc(p.username)}"><div class="avatar">${avatarHtml(p)}</div><div style="min-width:0;flex:1"><div class="personname">${esc(p.display_name||p.username)}</div><div class="preview">${onlineUsers.has(p.username)?"● Online · ":""}${esc(p.preview||("@"+p.username))}</div></div></div>`).join("");
+ $("people").querySelectorAll(".person").forEach(el=>el.onclick=()=>openChat(el.dataset.user));
 }
-
-async function loadMe() {
-  me = await api("/api/me");
-  $("myName").textContent = me.displayName;
-  $("myHandle").textContent = "@" + me.username;
-  $("editDisplayName").value = me.displayName;
-  $("editUsername").value = me.username;
-
-  if (me.profilePicture) {
-    $("myPicture").src = me.profilePicture;
-    $("myPicture").classList.remove("hidden");
-    $("myInitial").classList.add("hidden");
-  } else {
-    $("myInitial").textContent = (me.displayName || me.username)[0].toUpperCase();
-    $("myPicture").classList.add("hidden");
-    $("myInitial").classList.remove("hidden");
-  }
+$("search").addEventListener("input",()=>loadPeople($("search").value));
+async function openChat(username){
+ peer=username;$("app").classList.add("chat-open");err("chatError","");$("typing").textContent="";
+ const p=peopleCache.find(x=>x.username===username)||{username,display_name:username};
+ $("chatName").textContent=p.display_name||username;setAvatar($("chatAvatar"),p);updateChatStatus();
+ $("chatBody").innerHTML='<div class="welcome">Loading messages…</div>';
+ renderPeople();socket.emit("open conversation",username);
 }
-
-async function loadInbox() {
-  const users = await api("/api/inbox");
-  const container = $("inbox");
-  container.innerHTML = users.length
-    ? users.map(personButton).join("")
-    : '<p class="muted">No conversations yet. Search for someone above.</p>';
-  attachPersonClicks(container);
+function updateChatStatus(){$("chatStatus").textContent=onlineUsers.has(peer)?"● Online":"@"+peer}
+$("back").onclick=()=>{$("app").classList.remove("chat-open");peer=null};
+function renderMessages(messages){$("chatBody").innerHTML="";messages.forEach(addMessage);scrollBottom()}
+function addMessage(m){
+ if(!peer||!(m.username===peer||m.recipient===peer))return;
+ if($("chatBody").querySelector(`[data-id="${m.id}"]`))return;
+ const mine=m.username===me.username,b=document.createElement("div");
+ b.className="bubble"+(mine?" mine":"");b.dataset.id=m.id;
+ let html="";
+ if(m.text)html+=`<div>${esc(m.text).replace(/\n/g,"<br>")}</div>`;
+ if(m.media_url){
+  const url=esc(m.media_url),type=m.media_type||"",name=esc(m.media_name||"Attachment");
+  if(type.startsWith("image/"))html+=`<a href="${url}" target="_blank" rel="noopener"><img src="${url}" alt="${name}" loading="lazy"></a>`;
+  else if(type.startsWith("video/"))html+=`<video controls preload="metadata" src="${url}"></video>`;
+  else if(type.startsWith("audio/"))html+=`<audio controls preload="metadata" src="${url}"></audio>`;
+  else html+=`<a href="${url}" target="_blank" rel="noopener">📎 ${name}</a>`;
+ }
+ html+=`<div class="stamp">${mine?"You · ":""}${new Date(m.timestamp).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</div>`;
+ b.innerHTML=html;$("chatBody").appendChild(b);scrollBottom();
 }
-
-async function searchPeople() {
-  const q = $("search").value.trim();
-  const users = await api("/api/users?q=" + encodeURIComponent(q));
-  const container = $("searchResults");
-  container.innerHTML = users.length
-    ? users.map(personButton).join("")
-    : '<p class="muted">No users found.</p>';
-  attachPersonClicks(container);
-}
-
-async function openChat(username) {
-  activeChat = username;
-  const users = await api("/api/users?q=" + encodeURIComponent(username));
-  const found = users.find(u => u.username === username);
-  $("chatName").textContent = found ? found.displayName : username;
-  $("chatStatus").textContent = (online.has(username) || found?.online)
-    ? "Online" : "@" + username;
-  $("chatAvatar").innerHTML = found?.profilePicture
-    ? '<img class="avatar" src="' + escapeText(found.profilePicture) + '" alt="">'
-    : escapeText((found?.displayName || username)[0].toUpperCase());
-
-  $("messages").innerHTML = '<p class="muted">Loading messages...</p>';
-  $("chatError").textContent = "";
-  await loadInbox();
-  if (socket) socket.emit("open conversation", {with: username});
-}
-
-function renderMessages(messages) {
-  const box = $("messages");
-  box.innerHTML = "";
-  if (!messages.length) {
-    box.innerHTML = '<p class="muted">No messages yet. Say hello!</p>';
-    return;
-  }
-
-  for (const m of messages) {
-    const mine = m.username === me.username || m.user === me.username;
-    const bubble = document.createElement("div");
-    bubble.className = "bubble" + (mine ? " mine" : "");
-
-    if (m.text) {
-      const text = document.createElement("div");
-      text.textContent = m.text;
-      bubble.appendChild(text);
-    }
-
-    if (m.image) {
-      const img = document.createElement("img");
-      img.src = m.image;
-      img.alt = "Shared image";
-      img.loading = "lazy";
-      bubble.appendChild(img);
-    }
-
-    const time = document.createElement("time");
-    time.textContent = m.timestamp || "";
-    bubble.appendChild(time);
-    box.appendChild(bubble);
-  }
-
-  box.scrollTop = box.scrollHeight;
-}
-
-async function refreshApp() {
-  $("auth").classList.add("hidden");
-  $("app").classList.remove("hidden");
-  $("logout").classList.remove("hidden");
-  await loadMe();
-  await loadInbox();
-  await searchPeople();
-
-  socket = io();
-
-  socket.on("online users", list => {
-    online = new Set(list);
-    loadInbox().catch(() => {});
-    searchPeople().catch(() => {});
-  });
-
-  socket.on("user online", username => {
-    online.add(username);
-    if (activeChat === username) $("chatStatus").textContent = "Online";
-  });
-
-  socket.on("user offline", username => {
-    online.delete(username);
-    if (activeChat === username) $("chatStatus").textContent = "Offline";
-  });
-
-  socket.on("chat history", history => {
-    renderMessages(history);
-  });
-
-  socket.on("chat message", message => {
-    if (activeChat &&
-        ((message.username === me.username && message.recipient === activeChat) ||
-         (message.username === activeChat && message.recipient === me.username))) {
-      const current = [...$("messages").querySelectorAll(".bubble")].map(() => null);
-      // Rebuild the visible conversation from the latest history after a new message.
-      socket.emit("open conversation", {with: activeChat});
-    }
-    loadInbox().catch(() => {});
-  });
-}
-
-$("toggleAuth").addEventListener("click", () => {
-  signupMode = !signupMode;
-  $("displayName").classList.toggle("hidden", !signupMode);
-  $("displayName").required = signupMode;
-  $("authTitle").textContent = signupMode ? "Create your account" : "Welcome back";
-  $("authSubmit").textContent = signupMode ? "Sign up" : "Log in";
-  $("toggleAuth").textContent = signupMode ? "I already have an account" : "Create an account";
-  $("authError").textContent = "";
+function scrollBottom(){$("chatBody").scrollTop=$("chatBody").scrollHeight}
+$("message").addEventListener("input",()=>{
+ if(!peer)return;
+ socket.emit("typing",peer);clearTimeout(typingTimer);
+ typingTimer=setTimeout(()=>socket.emit("stop typing",peer),900);
 });
-
-$("authForm").addEventListener("submit", async event => {
-  event.preventDefault();
-  $("authError").textContent = "";
-  try {
-    await api(signupMode ? "/api/signup" : "/api/login", {
-      method: "POST",
-      body: JSON.stringify({
-        username: $("username").value.trim(),
-        password: $("password").value,
-        displayName: $("displayName").value.trim()
-      })
-    });
-    location.reload();
-  } catch (error) {
-    $("authError").textContent = error.message;
+$("composer").onsubmit=async e=>{
+ e.preventDefault();
+ if(!peer){err("chatError","Choose someone first.");return}
+ const text=$("message").value.trim();
+ if(!text&&!selectedMedia)return;
+ $("send").disabled=true;err("chatError","");
+ try{
+  let media=null;
+  if(selectedMedia){
+   const f=new FormData();f.append("file",selectedMedia);
+   media=await api("/api/message-upload",{method:"POST",body:f});
   }
-});
-
-$("logout").addEventListener("click", async () => {
-  await api("/api/logout", {method:"POST"});
-  location.reload();
-});
-
-$("editToggle").addEventListener("click", () => {
-  $("profileForm").classList.toggle("hidden");
-});
-
-$("profileForm").addEventListener("submit", async event => {
-  event.preventDefault();
-  $("profileStatus").textContent = "";
-  try {
-    await api("/api/profile", {
-      method: "PATCH",
-      body: JSON.stringify({
-        displayName: $("editDisplayName").value.trim(),
-        username: $("editUsername").value.trim()
-      })
-    });
-    $("profileStatus").textContent = "Profile saved.";
-    await loadMe();
-    await loadInbox();
-    await searchPeople();
-  } catch (error) {
-    $("profileStatus").textContent = error.message;
-  }
-});
-
-$("profilePick").addEventListener("change", async () => {
-  const file = $("profilePick").files[0];
-  if (!file) return;
-  try {
-    const form = new FormData();
-    form.append("image", file);
-    await api("/api/profile-picture", {method:"POST", body:form});
-    await loadMe();
-  } catch (error) {
-    alert(error.message);
-  }
-  $("profilePick").value = "";
-});
-
-let searchTimer;
-$("search").addEventListener("input", () => {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => searchPeople().catch(() => {}), 200);
-});
-
-$("messageForm").addEventListener("submit", async event => {
-  event.preventDefault();
-  const text = $("messageText").value.trim();
-  const file = $("imagePick").files[0];
-
-  if (!activeChat) {
-    $("chatError").textContent = "Choose someone from your inbox first.";
-    return;
-  }
-  if (!text && !file) return;
-
-  $("chatError").textContent = "";
-
-  try {
-    let image = null;
-
-    if (file) {
-      const form = new FormData();
-      form.append("image", file);
-      const uploaded = await api("/api/message-image", {
-        method: "POST",
-        body: form
-      });
-      image = uploaded.url;
-    }
-
-    socket.emit("chat message", {
-      text,
-      to: activeChat,
-      image
-    });
-
-    $("messageText").value = "";
-    $("imagePick").value = "";
-    socket.emit("open conversation", {with: activeChat});
-  } catch (error) {
-    $("chatError").textContent = error.message;
-  }
-});
-
-api("/api/me")
-  .then(refreshApp)
-  .catch(() => {
-    $("auth").classList.remove("hidden");
-  });
+  socket.emit("chat message",{recipient:peer,text,media_url:media?.url||null,media_type:media?.type||null,media_name:media?.name||null});
+  $("message").value="";selectedMedia=null;$("mediaFile").value="";
+  $("message").placeholder="Write a message...";
+  socket.emit("stop typing",peer);
+ }catch(e){err("chatError",e.message)}
+ finally{$("send").disabled=false}
+};
+$("mediaFile").onchange=()=>{
+ const f=$("mediaFile").files[0];if(!f)return;
+ if(f.size>15*1024*1024){err("chatError","File must be 15 MB or smaller.");$("mediaFile").value="";return}
+ selectedMedia=f;$("message").placeholder="Ready to send: "+f.name;
+};
+$("saveProfile").onclick=async()=>{
+ try{
+  const d=await api("/api/profile",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({display_name:$("displayName").value})});
+  me=d.user;$("myName").textContent=me.display_name;$("displayName").value=me.display_name;
+  err("chatError","Profile updated.");await loadPeople($("search").value);
+ }catch(e){err("chatError",e.message)}
+};
+$("profileFile").onchange=async()=>{
+ const f=$("profileFile").files[0];if(!f)return;
+ const data=new FormData();data.append("image",f);
+ try{
+  const d=await api("/api/profile-picture",{method:"POST",body:data});
+  me=d.user;setAvatar($("myAvatar"),me);await loadPeople($("search").value);
+  err("chatError","Profile photo updated.");
+ }catch(e){err("chatError",e.message)}
+ finally{$("profileFile").value=""}
+};
+$("logout").onclick=async()=>{try{await api("/api/logout",{method:"POST"})}finally{location.reload()}};
+start();
 </script>
 </body>
-  </html>
-  
+</html>
